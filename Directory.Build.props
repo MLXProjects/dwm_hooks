@@ -1,0 +1,19 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- Auto-imported by every project under this folder (ancestor search). -->
+  <PropertyGroup>
+    <!-- Final artifacts: out/<arch>/  (e.g. out/x64/)
+         Intermediates:  out/obj/<arch>/  (e.g. out/obj/x64/) -->
+    <OutDir>$(MSBuildThisFileDirectory)out\$(Platform)\</OutDir>
+    <IntDir>$(MSBuildThisFileDirectory)out\obj\$(Platform)\$([System.IO.Path]::GetFileNameWithoutExtension($(MSBuildProjectFile)))\</IntDir>
+    <!-- All projects share one IntDir, so their vc143.pdb is shared too:
+         cl.exe must write the PDB synchronously (/FS) or parallel builds fail
+         with C1041 "cannot open program database". -->
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <!-- Per-project PDB name so the 4 projects sharing one IntDir don't
+           clobber each other's vc143.pdb (fixes LNK4099 / C1041). -->
+      <ProgramDataBaseFileName>$(IntDir)$(MSBuildProjectName).pdb</ProgramDataBaseFileName>
+    </ClCompile>
+  </ItemDefinitionGroup>
+</Project>

@@ -12,8 +12,8 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
-    <ProjectGuid>{A1B2C3D4-0002-0002-0002-000000000002}</ProjectGuid>
-    <RootNamespace>ghost_injector</RootNamespace>
+    <ProjectGuid>{A1B2C3D4-0001-0001-0001-000000000001}</ProjectGuid>
+    <RootNamespace>dinject</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
     <Keyword>Win32Proj</Keyword>
   </PropertyGroup>
@@ -62,7 +62,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="ghost_injector.c" />
+    <ClCompile Include="dinject.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

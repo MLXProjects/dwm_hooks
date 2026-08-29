@@ -1,7 +1,7 @@
-// ghost_hook.cpp  -- inline-hooks CGhostWindow::PaintGhost inside dwmghost.dll
+﻿// mlxghost.cpp  -- inline-hooks CGhostWindow::PaintGhost inside dwmghost.dll
 //
 // Build (x64, native tools command prompt):
-//   (see ghost_hook.vcxproj / `MSBuild ghost.sln /p:Platform=x64 /p:Configuration=Release`)
+//   (see mlxghost.vcxproj / `MSBuild ghost.sln /p:Platform=x64 /p:Configuration=Release`)
 //
 // /GUARD:CF matches DWM's Control Flow Guard so any indirect call into our code validates.
 // CIG is OFF (verified) so LoadLibrary injection is allowed; no driver / manual mapping needed.

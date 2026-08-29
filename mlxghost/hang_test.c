@@ -1,13 +1,13 @@
-// htest.c  -- Win32 test harness to exercise DWM ghosting.
+﻿// htest.c  -- Win32 test harness to exercise DWM mlxghosting.
 //
 // Build (x64 Native Tools command prompt):
 //   cl /O2 /GUARD:CF htest.c /link /SUBSYSTEM:WINDOWS user32.lib gdi32.lib /OUT:htest.exe
-//   (or: MSBuild ghost.sln /p:Platform=x64 /p:Configuration=Release)
+//   (or: MSBuild mlxghost.sln /p:Platform=x64 /p:Configuration=Release)
 //
 // Buttons:
 //   "Spawn child window"  -> creates a separate top-level window on its own thread
 //   "Hang child window"   -> toggles: blocks that window's message loop so DWM
-//                             flags it as hung and draws the ghost overlay (~5s);
+//                             flags it as hung and draws the mlxghost overlay (~5s);
 //                             click again to "Restore" and make it responsive.
 
 #include <windows.h>
@@ -30,7 +30,7 @@ static HANDLE g_hResumeEvent  = NULL;
 static LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
     // When flagged, block this thread inside the WndProc -> window stops pumping
-    // messages -> DWM considers it hung and shows the ghost window.
+    // messages -> DWM considers it hung and shows the mlxghost window.
     if (g_Hung)
         WaitForSingleObject(g_hResumeEvent, INFINITE);
 
@@ -39,7 +39,7 @@ static LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         PAINTSTRUCT ps;
         HDC hdc = BeginPaint(hwnd, &ps);
         RECT r; GetClientRect(hwnd, &r);
-        DrawTextW(hdc, L"Child window\n(hang me to see the ghost)", -1, &r,
+        DrawTextW(hdc, L"Child window\n(hang me to see the mlxghost)", -1, &r,
                   DT_CENTER | DT_VCENTER | DT_SINGLELINE);
         EndPaint(hwnd, &ps);
         return 0;

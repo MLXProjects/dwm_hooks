@@ -1,19 +1,19 @@
-// ghost_injector.c  -- x64 injector for dwm.exe
+﻿// dinject.c  -- generic x64 injector for dwm.exe
 //
 // Build (x64 Native Tools command prompt):
-//   cl /O2 ghost_injector.c /link /OUT:ghost_injector.exe psapi.lib
-//   (or: MSBuild ghost.sln /p:Platform=x64 /p:Configuration=Release)
+//   cl /O2 dinject.c /link /OUT:dinject.exe psapi.lib
+//   (or: MSBuild hooks.sln /p:Platform=x64 /p:Configuration=Release)
 //
 // Usage:
-//   ghost_injector.exe -i            inject ghost_hook.dll into dwm.exe
-//   ghost_injector.exe -r            unload the injected dll from dwm.exe
-//   ghost_injector.exe -h            show help
+//   dinject.exe -i <dllpath>   inject <dllpath> into dwm.exe
+//   dinject.exe -r <dllpath>   unload <dllpath> from dwm.exe
+//   dinject.exe -h             show help
 //
-// Optional trailing arg after -i:
-//   ghost_injector.exe -i [dllpath]  inject a specific dll (default ghost_hook.dll)
-//
-// The tool always targets dwm.exe. dwm.exe is NOT a protected process (verified),
-// so a normal LoadLibrary / FreeLibrary injection from an elevated process works.
+// The tool is deliberately generic: it always targets dwm.exe and works with
+// any hook DLL. Each DLL lives in its own folder (e.g. mlxghost\mlxghost.dll,
+// mlxcore\mlxcore.dll); pass the path you want on the command line. dwm.exe
+// is NOT a protected process (verified), so a normal LoadLibrary / FreeLibrary
+// injection from an elevated process works.
 
 #include <windows.h>
 #include <tlhelp32.h>
@@ -71,15 +71,18 @@ static const wchar_t* ResolveDllPath(const wchar_t* dllpath, wchar_t* out, size_
 
 static void ShowHelp(void)
 {
-    wprintf(L"Usage: ghost_injector.exe <option> [dllpath]\n");
+    wprintf(L"Usage: dinject.exe <option> <dllpath>\n");
     wprintf(L"\n");
     wprintf(L"Injects into (or unloads from) the running dwm.exe process.\n");
     wprintf(L"\n");
     wprintf(L"Options:\n");
-    wprintf(L"  -i [path.dll]   Inject the dll into dwm.exe.\n");
-    wprintf(L"                  If path.dll is omitted, ghost_hook.dll is used.\n");
-    wprintf(L"  -r              Release / unload the injected dll from dwm.exe.\n");
+    wprintf(L"  -i <path.dll>   Inject the dll into dwm.exe.\n");
+    wprintf(L"  -r <path.dll>   Release / unload the dll from dwm.exe.\n");
     wprintf(L"  -h              Show this help.\n");
+    wprintf(L"\n");
+    wprintf(L"Example:\n");
+    wprintf(L"  dinject.exe -i mlxghost.dll\n");
+    wprintf(L"  dinject.exe -r mlxghost.dll\n");
 }
 
 static int DoInject(DWORD pid, const wchar_t* dllpath)
@@ -121,14 +124,18 @@ static int DoInject(DWORD pid, const wchar_t* dllpath)
     return status ? 0 : 1;
 }
 
-static int DoRelease(DWORD pid)
+static int DoRelease(DWORD pid, const wchar_t* dllpath)
 {
     HANDLE h = OpenProcess(PROCESS_VM_READ | PROCESS_QUERY_INFORMATION |
                            PROCESS_CREATE_THREAD, FALSE, pid);
     if (!h) { wprintf(L"[!] OpenProcess failed: %lu\n", GetLastError()); return 1; }
 
-    HMODULE hmod = GetRemoteModule(h, L"ghost_hook.dll");
-    if (!hmod) { wprintf(L"[!] ghost_hook.dll not loaded in target\n"); CloseHandle(h); return 1; }
+    wchar_t name[MAX_PATH];
+    const wchar_t* p = wcsrchr(dllpath, L'\\');
+    wcscpy_s(name, _countof(name), p ? p + 1 : dllpath);
+
+    HMODULE hmod = GetRemoteModule(h, name);
+    if (!hmod) { wprintf(L"[!] %s not loaded in target\n", name); CloseHandle(h); return 1; }
 
     // FreeLibrary has the right signature to be a remote thread start routine.
     LPTHREAD_START_ROUTINE freeLib = (LPTHREAD_START_ROUTINE)GetProcAddress(
@@ -148,7 +155,7 @@ static int DoRelease(DWORD pid)
 
 int wmain(int argc, wchar_t** argv)
 {
-    if (argc < 2) { ShowHelp(); return 0; }
+    if (argc < 3) { ShowHelp(); return 0; }
 
     // accept -x /x --x /x  (case-insensitive single letter)
     wchar_t flag = 0;
@@ -163,10 +170,9 @@ int wmain(int argc, wchar_t** argv)
     if (!pid) { wprintf(L"[!] dwm.exe not found\n"); return 1; }
 
     if (flag == L'i') {
-        const wchar_t* dll = (argc > 2) ? argv[2] : L"ghost_hook.dll";
-        return DoInject(pid, dll);
+        return DoInject(pid, argv[2]);
     } else if (flag == L'r') {
-        return DoRelease(pid);
+        return DoRelease(pid, argv[2]);
     }
 
     ShowHelp();
