@@ -1,0 +1,24 @@
+# Visual Studio/MSBuild output
+x64/
+Debug/
+Release/
+.vs/
+*.user
+*.suo
+*.sdf
+*.ipch
+*.aps
+*.ilk
+*.lib
+
+# Compiled artifacts
+*.dll
+*.exe
+*.pdb
+*.obj
+*.iobj
+*.tlog
+*.lastbuildstate
+*.recipe
+*.exp
+BuildLog.htm

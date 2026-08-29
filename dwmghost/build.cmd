@@ -1,0 +1,1 @@
+@"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\MSBuild.exe" ghost.sln /p:Platform=x64 /p:Configuration=Release /v:minimal /nologo
