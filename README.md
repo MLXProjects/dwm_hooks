@@ -10,7 +10,7 @@ Some of the projects mentioned later on the Motivation section are clearly not "
 - `hooks.sln` main solution to build all projects
 - `dinject.cpp & dinject.vcxproj` DLL injector that targets DWM, requires SYSTEM permissions (I guess due to DWM running in Session 0/1 user). TODO: it should have it's own folder.
 - `mlxghost/` DLL that hooks into the dwmghost.dll to turn the "not responding" windows red instead of white
-- `mlxcore/` currently a placeholder, it should be a DLL that hooks into the dwmcore.dll to apply transformations to any window
+- `mlxcore/` DLL that hooks into the dwmcore.dll to write text at the top left of any window (I hope to turn this into a window transform soon) and logs to C:\mlxcore.log for debug.
 
 ## Motivation
 I don't really remember which was the first one, but since ~2015 I've found a bunch of content that made me think "hey that's cool, let's replicate it".  
