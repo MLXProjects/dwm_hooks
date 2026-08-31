@@ -2,7 +2,7 @@
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.35203.147
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dinject", "dinject.vcxproj", "{A1B2C3D4-0001-0001-0001-000000000001}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dinject", "dinject\dinject.vcxproj", "{A1B2C3D4-0001-0001-0001-000000000001}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mlxghost", "mlxghost\mlxghost.vcxproj", "{A1B2C3D4-0002-0002-0002-000000000002}"
 EndProject
