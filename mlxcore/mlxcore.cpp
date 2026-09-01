@@ -11,7 +11,7 @@
 // !! BUILD-SPECIFIC VALUES -- re-derive if dwmcore.dll changes (Windows update) !!
 //   * RENDER_CONTENT_RVA : from IDA, RenderContent entry 0x180073770 - imagebase 0x180000000
 //   * DRAW_TEXT_W_VTABLE_IDX : vtable index for DrawTextW (varies by build)
-// --------------------------------------------------------------------------- 
+// ---------------------------------------------------------------------------
 #include <errno.h>
 #include <windows.h>
 #include <dwmapi.h>
@@ -52,86 +52,31 @@ typedef struct _CVisual {
 } CVisual;
 #pragma pack(pop)
 
-// Efficient logging system - keeps file handle open, uses buffering, and OutputDebugString
-#define LOG_BUFFER_SIZE 4096
-
+// Minimal logging - just open file and write directly
 static FILE* g_LogFile = NULL;
-static char g_LogBuffer[LOG_BUFFER_SIZE];
-static size_t g_LogBufferPos = 0;
-static CRITICAL_SECTION g_LogLock;
 
-static void LogInit()
+static void LogInit(void)
 {
-    InitializeCriticalSection(&g_LogLock);
-    g_LogFile = NULL;
     errno_t err = fopen_s(&g_LogFile, "C:\\mlxcore.log", "w");
-    if (!g_LogFile) {
-        // Fallback to OutputDebugString only
-    }
-    g_LogBufferPos = 0;
-    g_LogBuffer[0] = '\0';
-}
-
-static void LogFlush()
-{
-    if (!g_LogFile || g_LogBufferPos == 0) return;
-    
-    EnterCriticalSection(&g_LogLock);
-    fwrite(g_LogBuffer, 1, g_LogBufferPos, g_LogFile);
-    fflush(g_LogFile);
-    g_LogBufferPos = 0;
-    g_LogBuffer[0] = '\0';
-    LeaveCriticalSection(&g_LogLock);
-}
-
-static void LogWriteInternal(const char* fmt, va_list args)
-{
-    SYSTEMTIME st;
-    GetLocalTime(&st);
-    
-    // Format timestamp
-    int prefixLen = 0;
-    if (g_LogBufferPos < LOG_BUFFER_SIZE - 20) {
-        prefixLen = _snprintf_s(g_LogBuffer + g_LogBufferPos, LOG_BUFFER_SIZE - g_LogBufferPos, _TRUNCATE,
-            "[%02d:%02d:%02d.%03d] ", st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
-        if (prefixLen > 0) g_LogBufferPos += prefixLen;
-    }
-    
-    // Format message
-    int msgLen = 0;
-    if (g_LogBufferPos < LOG_BUFFER_SIZE - 1) {
-        msgLen = _vsnprintf_s(g_LogBuffer + g_LogBufferPos, LOG_BUFFER_SIZE - g_LogBufferPos, _TRUNCATE, fmt, args);
-        if (msgLen > 0) {
-            g_LogBufferPos += msgLen;
-            if (g_LogBufferPos < LOG_BUFFER_SIZE - 1) {
-                g_LogBuffer[g_LogBufferPos++] = '\n';
-                g_LogBuffer[g_LogBufferPos] = '\0';
-            }
-        }
-    }
-    
-    // Flush if buffer is getting full
-    if (g_LogBufferPos >= LOG_BUFFER_SIZE - 256) {
-        LogFlush();
-    }
 }
 
 static void LogWrite(const char* fmt, ...)
 {
+    if (!g_LogFile) return;
     va_list args;
     va_start(args, fmt);
-    LogWriteInternal(fmt, args);
+    vfprintf(g_LogFile, fmt, args);
+    fputc('\n', g_LogFile);
+    fflush(g_LogFile);
     va_end(args);
 }
 
-static void LogCleanup()
+static void LogCleanup(void)
 {
-    LogFlush();
     if (g_LogFile) {
         fclose(g_LogFile);
         g_LogFile = NULL;
     }
-    DeleteCriticalSection(&g_LogLock);
 }
 
 // Function pointers (resolved at runtime)
@@ -191,11 +136,11 @@ static BYTE* AllocateNear(BYTE* target, SIZE_T size)
 {
     SYSTEM_INFO si;
     GetSystemInfo(&si);
-    BYTE* minAddr = (BYTE*)((target > (BYTE*)si.lpMaximumApplicationAddress - (INT_PTR)0x80000000) 
-                            ? (BYTE*)si.lpMinimumApplicationAddress 
+    BYTE* minAddr = (BYTE*)((target > (BYTE*)si.lpMaximumApplicationAddress - (INT_PTR)0x80000000)
+                            ? (BYTE*)si.lpMinimumApplicationAddress
                             : target - 0x80000000);
-    BYTE* maxAddr = (BYTE*)((target < (BYTE*)si.lpMinimumApplicationAddress + (INT_PTR)0x80000000) 
-                            ? (BYTE*)si.lpMaximumApplicationAddress 
+    BYTE* maxAddr = (BYTE*)((target < (BYTE*)si.lpMinimumApplicationAddress + (INT_PTR)0x80000000)
+                            ? (BYTE*)si.lpMaximumApplicationAddress
                             : target + 0x80000000);
 
     for (BYTE* addr = target; addr >= minAddr; addr -= 0x10000) {
@@ -213,7 +158,7 @@ static BYTE* AllocateNear(BYTE* target, SIZE_T size)
 static BOOL ResolveDirectWriteFunctions()
 {
     if (g_DWriteCreateFactory) return TRUE;
-    
+
     HMODULE hDWrite = GetModuleHandleW(L"dwrite.dll");
     if (!hDWrite) {
         hDWrite = LoadLibraryW(L"dwrite.dll");
@@ -249,11 +194,11 @@ static BOOL InitializeTextFormat()
 
     IDWriteFactory* factory = NULL;
     LogWrite("InitializeTextFormat: calling DWriteCreateFactory");
-    
+
     __try {
         HRESULT hr = g_DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)&factory);
         LogWrite("InitializeTextFormat: DWriteCreateFactory returned 0x%X, factory=%p", hr, factory);
-        
+
         if (FAILED(hr) || !factory) {
             LogWrite("InitializeTextFormat: DWriteCreateFactory failed");
             return FALSE;
@@ -306,10 +251,10 @@ static BOOL InitializeTextFormat()
 static BOOL ResolveDrawTextWFromVtable()
 {
     if (g_DrawTextW) return TRUE;
-    
+
     HMODULE base = GetModuleHandleW(L"dwmcore.dll");
     if (!base) return FALSE;
-    
+
     // We need a CDrawingContext instance to read its vtable
     // We can't easily get one without hooking, so use RVA as fallback
     // TODO: Find vtable index for DrawTextW by scanning for the function pattern
@@ -321,7 +266,7 @@ static BOOL ResolveDrawTextWFromVtable()
 static void DrawTestText(void* ctx, CWindowNode* self)
 {
     LogWrite("DrawTestText: entry, ctx=%p", ctx);
-    
+
     if (!g_DrawTextW) {
         HMODULE base = GetModuleHandleW(L"dwmcore.dll");
         if (base) {
@@ -352,15 +297,15 @@ static void DrawTestText(void* ctx, CWindowNode* self)
     // Get window bounds from CWindowNode (GetHwnd at offset 0x268)
     RECT clientRect = {0};
     ///
-	LogWrite("DrawTestText: hwnd=%p", self->hwnd);
-	GetClientRect(self->hwnd, &clientRect);
-	LogWrite("DrawTestText: client rect=(%d,%d,%d,%d)", clientRect.left, clientRect.top, clientRect.right, clientRect.bottom);
-    
+       LogWrite("DrawTestText: hwnd=%p", self->hwnd);
+       GetClientRect(self->hwnd, &clientRect);
+       LogWrite("DrawTestText: client rect=(%d,%d,%d,%d)", clientRect.left, clientRect.top, clientRect.right, clientRect.bottom);
+
     // Draw "MLX" text at top-left of client area
     WCHAR text[] = L"MLX";
     D2D_RECT_F rect = { 0 };
     D3DCOLORVALUE textColor = { 1.0f, 0.0f, 0.0f, 1.0f }; // Bright red
-    
+
     if (clientRect.right > clientRect.left && clientRect.bottom > clientRect.top) {
         // Use client area coordinates - draw at top-left with padding
         rect.left = 0.0f;
@@ -376,14 +321,14 @@ static void DrawTestText(void* ctx, CWindowNode* self)
     }
 
     LogWrite("DrawTestText: calling DrawTextW, rect=(%.1f,%.1f,%.1f,%.1f)", rect.left, rect.top, rect.right, rect.bottom);
-    
+
     __try {
         HRESULT hr = g_DrawTextW(ctx, text, 3, g_TextFormat, &rect, &textColor);
         LogWrite("DrawTextW returned: 0x%X", hr);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         LogWrite("DrawTestText: EXCEPTION in DrawTextW! code=0x%X", GetExceptionCode());
     }
-    
+
     LogWrite("DrawTestText: exit");
 }
 
@@ -394,7 +339,7 @@ static HRESULT WINAPI MyRenderContent(
 )
 {
     LogWrite("MyRenderContent: entry, self=%p, ctx=%p", self, ctx);
-	
+
     // Call original to render the window normally
     HRESULT hr = 0;
     __try {
@@ -410,12 +355,12 @@ static HRESULT WINAPI MyRenderContent(
     if (self->hwnd) {
         GetWindowTextW(self->hwnd, title, 256);
         LogWrite("MyRenderContent: window title='%ls'", title);
-		if (ctx) {
-			// Draw our test text AFTER rendering so it's at the top
-			LogWrite("MyRenderContent: calling DrawTestText");
-			DrawTestText(ctx, self);
-			LogWrite("MyRenderContent: DrawTestText returned");
-		}
+               if (ctx) {
+                       // Draw our test text AFTER rendering so it's at the top
+                       LogWrite("MyRenderContent: calling DrawTestText");
+                       DrawTestText(ctx, self);
+                       LogWrite("MyRenderContent: DrawTestText returned");
+               }
     }
 
     return hr;
